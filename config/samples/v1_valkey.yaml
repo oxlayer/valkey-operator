@@ -1,4 +1,4 @@
-apiVersion: oxlayer/v1
+apiVersion: valkey.oxlayer.dev/v1
 kind: Valkey
 metadata:
   labels:

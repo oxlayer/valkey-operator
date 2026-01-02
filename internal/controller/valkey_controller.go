@@ -106,9 +106,9 @@ type ValkeyReconciler struct {
 //go:embed scripts/*
 var scripts embed.FS
 
-// +kubebuilder:rbac:groups=oxlayer,resources=valkeys,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=oxlayer,resources=valkeys/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=oxlayer,resources=valkeys/finalizers,verbs=update
+// +kubebuilder:rbac:groups=valkey.oxlayer.dev,resources=valkeys,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=valkey.oxlayer.dev,resources=valkeys/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=valkey.oxlayer.dev,resources=valkeys/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cert-manager.io,resources=clusterissuers;issuers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
