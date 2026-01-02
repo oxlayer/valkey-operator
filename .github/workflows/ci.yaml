@@ -321,7 +321,8 @@ jobs:
           cache-from: type=gha
           # cache-to: type=gha,mode=max
           labels: ${{ steps.meta_controller.outputs.labels }}
-          outputs: type=image,"name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}",push-by-digest=true,name-canonical=true,push=true
+          tags: ${{ steps.meta_controller.outputs.tags }}
+          outputs: type=image,push=true
       - name: Build and push Sidecar image
         id: docker_build_sidecar
         uses: docker/build-push-action@v6
@@ -332,29 +333,44 @@ jobs:
           cache-from: type=gha
           # cache-to: type=gha,mode=max
           labels: ${{ steps.meta_sidecar.outputs.labels }}
-          outputs: type=image,"name=${{ env.REGISTRY }}/${{ github.repository_owner }}/valkey-sidecar",push-by-digest=true,name-canonical=true,push=true
+          tags: ${{ steps.meta_sidecar.outputs.tags }}
+          outputs: type=image,push=true
       - name: Get digests for attestation
         id: get_digests
         run: |
-          # Obter digest do Controller usando a tag
-          CONTROLLER_DIGEST=$(docker buildx imagetools inspect \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }} \
-            --format '{{json .}}' | jq -r '.manifest.digest // .digest // empty')
+          # Obter digest do Controller usando a tag (com retry para aguardar propagação)
+          for i in {1..5}; do
+            CONTROLLER_DIGEST=$(docker buildx imagetools inspect \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }} \
+              --format '{{json .}}' 2>/dev/null | jq -r '.manifest.digest // .digest // empty' || echo "")
+            if [ -n "$CONTROLLER_DIGEST" ] && [ "$CONTROLLER_DIGEST" != "null" ] && [ "$CONTROLLER_DIGEST" != "" ]; then
+              break
+            fi
+            echo "Attempt $i/5: Waiting for Controller image to be available..."
+            sleep 2
+          done
           if [ -z "$CONTROLLER_DIGEST" ] || [ "$CONTROLLER_DIGEST" = "null" ]; then
-            echo "ERROR: Failed to get Controller digest"
-            docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+            echo "ERROR: Failed to get Controller digest after retries"
+            docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }} || true
             exit 1
           fi
           echo "Controller digest: $CONTROLLER_DIGEST"
           echo "controller_digest=$CONTROLLER_DIGEST" >> $GITHUB_OUTPUT
 
-          # Obter digest do Sidecar usando a tag
-          SIDECAR_DIGEST=$(docker buildx imagetools inspect \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/valkey-sidecar:${{ env.RELEASE_VERSION }} \
-            --format '{{json .}}' | jq -r '.manifest.digest // .digest // empty')
+          # Obter digest do Sidecar usando a tag (com retry para aguardar propagação)
+          for i in {1..5}; do
+            SIDECAR_DIGEST=$(docker buildx imagetools inspect \
+              ${{ env.REGISTRY }}/${{ github.repository_owner }}/valkey-sidecar:${{ env.RELEASE_VERSION }} \
+              --format '{{json .}}' 2>/dev/null | jq -r '.manifest.digest // .digest // empty' || echo "")
+            if [ -n "$SIDECAR_DIGEST" ] && [ "$SIDECAR_DIGEST" != "null" ] && [ "$SIDECAR_DIGEST" != "" ]; then
+              break
+            fi
+            echo "Attempt $i/5: Waiting for Sidecar image to be available..."
+            sleep 2
+          done
           if [ -z "$SIDECAR_DIGEST" ] || [ "$SIDECAR_DIGEST" = "null" ]; then
-            echo "ERROR: Failed to get Sidecar digest"
-            docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/valkey-sidecar:${{ env.RELEASE_VERSION }}
+            echo "ERROR: Failed to get Sidecar digest after retries"
+            docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/valkey-sidecar:${{ env.RELEASE_VERSION }} || true
             exit 1
           fi
           echo "Sidecar digest: $SIDECAR_DIGEST"
