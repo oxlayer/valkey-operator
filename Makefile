@@ -6,14 +6,7 @@ IMG_SIDECAR ?= $(REGISTRY)/valkey-sidecar:$(VERSION)
 IMG_VALKEY ?= $(REGISTRY)/valkey:$(VALKEY_VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
-
-GO := $(shell which go)
+GO ?= go
 MINIKUBE := $(shell which minikube)
 KUBECTL := $(shell which kubectl)
 VERSION ?= $(shell  if [ ! -z $$(git tag --points-at HEAD) ] ; then git tag --points-at HEAD|cat ; else  git rev-parse --short HEAD|cat; fi )
@@ -316,7 +309,7 @@ define go-install-tool
 set -e; \
 package=$(2)@$(3) ;\
 echo "Downloading $${package}" ;\
-GOOS=linux GOARCH=amd64 GOBIN=$(LOCALBIN) go install $${package} ;\
+GOBIN=$(LOCALBIN) go install $${package} ;\
 mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
 }
 endef
