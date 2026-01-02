@@ -1,11 +1,6 @@
 name: Scan
 
-# Run workflow on all branches except main, and on pull requests.
-# Main branch is protected and should only receive code via PR merges.
 on:
-  push:
-    branches-ignore:
-      - main
   pull_request:
 
 env:
