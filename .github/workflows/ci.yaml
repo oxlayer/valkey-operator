@@ -207,7 +207,7 @@ jobs:
             goos: linux
             goarch: amd64
           - platform: linux/arm64
-            runner: buildjet-4vcpu-ubuntu-2204-arm
+            runner: self-hosted
             goos: linux
             goarch: arm64
     steps:
@@ -265,7 +265,7 @@ jobs:
           - platform: linux/amd64
             runner: ubuntu-latest
           - platform: linux/arm64
-            runner: buildjet-4vcpu-ubuntu-2204-arm
+            runner: self-hosted
     permissions:
       contents: read
       packages: write
