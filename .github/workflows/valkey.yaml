@@ -183,7 +183,7 @@ jobs:
           echo "valkey_manifest_digest=$VALKEY_MANIFEST_DIGEST" >> $GITHUB_OUTPUT
           echo "Valkey manifest digest: $VALKEY_MANIFEST_DIGEST"
       - name: Set up Cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v3.7.0
       - name: Sign Valkey manifest list
         run: |
           cosign sign --yes ${{ env.REGISTRY }}/${{ github.repository_owner }}/valkey:${{ env.VALKEY_VERSION }}@${{ steps.get_manifest_digest.outputs.valkey_manifest_digest }}
