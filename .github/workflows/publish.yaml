@@ -65,7 +65,7 @@ jobs:
           fi
   publish:
     needs: resolve-tag
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404-arm
     concurrency:
       group: publish-${{ needs.resolve-tag.outputs.tag }}
       cancel-in-progress: false
@@ -81,7 +81,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
   upload-assets:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404-arm
     needs: [resolve-tag, publish]
     name: Upload release assets
     concurrency:
@@ -120,7 +120,7 @@ jobs:
           tag: ${{ needs.resolve-tag.outputs.tag }}
           overwrite: true
   publish-helm:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404-arm
     needs: [resolve-tag, publish]
     name: Publish Helm Chart
     concurrency:
