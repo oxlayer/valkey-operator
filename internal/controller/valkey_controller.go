@@ -326,18 +326,59 @@ func (r *ValkeyReconciler) getCACertificate(ctx context.Context, valkey *hyperv1
 func (r *ValkeyReconciler) checkState(ctx context.Context, valkey *hyperv1.Valkey) error {
 	logger := log.FromContext(ctx)
 
+	// Check if at least one pod is ready before attempting connection
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList,
+		client.InNamespace(valkey.Namespace),
+		client.MatchingLabels(labels(valkey))); err != nil {
+		logger.V(1).Info("failed to list pods, will retry", "error", err)
+		return err
+	}
+
+	// Check if any pod is ready
+	hasReadyPod := false
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			for _, condition := range pod.Status.Conditions {
+				if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+					hasReadyPod = true
+					break
+				}
+			}
+			if hasReadyPod {
+				break
+			}
+		}
+	}
+
+	if !hasReadyPod {
+		// Pod not ready yet, this is expected during startup
+		logger.V(1).Info("valkey pod not ready yet, will retry")
+		return fmt.Errorf("pod not ready")
+	}
+
 	initHost := fmt.Sprintf("%s.%s.svc", valkey.Name, valkey.Namespace)
 	initAddress := fmt.Sprintf("%s:%d", initHost, ValkeyPort)
 	// Use single client mode for standalone mode
 	singleMode := valkey.Spec.StandaloneMode
 	vClient, err := r.getClient(ctx, valkey, initAddress, singleMode)
 	if err != nil {
-		logger.Error(err, "failed to create valkey client")
+		// Connection refused is expected if pod just became ready but valkey is still starting
+		if strings.Contains(err.Error(), "connection refused") || strings.Contains(err.Error(), "no such host") {
+			logger.V(1).Info("valkey not accepting connections yet, will retry", "error", err)
+		} else {
+			logger.Error(err, "failed to create valkey client")
+		}
 		return err
 	}
 	defer vClient.Close()
 	if err := vClient.Do(ctx, vClient.B().Ping().Build()).Error(); err != nil {
-		logger.Error(err, "failed to ping valkey")
+		// Connection errors are expected during startup
+		if strings.Contains(err.Error(), "connection refused") || strings.Contains(err.Error(), "no such host") {
+			logger.V(1).Info("valkey not responding to ping yet, will retry", "error", err)
+		} else {
+			logger.Error(err, "failed to ping valkey")
+		}
 		return err
 	}
 	valkey.Status.Ready = true
